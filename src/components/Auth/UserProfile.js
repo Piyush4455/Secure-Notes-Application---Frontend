@@ -143,7 +143,6 @@ const UserProfile = () => {
     try {
       setLoading(true);
       const formData = new URLSearchParams();
-      formData.append("token", token);
       formData.append("newUsername", newUsername);
       formData.append("newPassword", newPassword);
       await api.post("/auth/update-credentials", formData, {
