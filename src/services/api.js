@@ -1,64 +1,47 @@
 import axios from "axios";
 
-console.log("API URL:", process.env.REACT_APP_API_URL);
+const API_BASE = `${process.env.REACT_APP_API_URL}/api`;
 
-// Create an Axios instance
+console.log("API URL:", API_BASE);
+
 const api = axios.create({
-  baseURL: `${process.env.REACT_APP_API_URL}/api`,
+  baseURL: API_BASE,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  withCredentials: true,
+  timeout: 15000,
 });
 
-// Add a request interceptor to include JWT and CSRF tokens
+// ===============================
+// REQUEST INTERCEPTOR (JWT ONLY)
+// ===============================
 api.interceptors.request.use(
-  async (config) => {
+  (config) => {
     const token = localStorage.getItem("JWT_TOKEN");
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    let csrfToken = localStorage.getItem("CSRF_TOKEN");
-    if (!csrfToken) {
-      try {
-        const response = await axios.get(
-          `${process.env.REACT_APP_API_URL}/api/csrf-token`,
-          { withCredentials: true }
-        );
-        csrfToken = response.data.token;
-        localStorage.setItem("CSRF_TOKEN", csrfToken);
-      } catch (error) {
-        console.error("Failed to fetch CSRF token", error);
-      }
-    }
-
-    if (csrfToken) {
-      config.headers["X-XSRF-TOKEN"] = csrfToken;
-    }
-    console.log("X-XSRF-TOKEN " + csrfToken);
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// RESPONSE INTERCEPTOR TO HANDLE 401 ERRORS GLOBALLY
+// ===============================
+// RESPONSE INTERCEPTOR (UNCHANGED)
+// ===============================
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
       console.warn("JWT expired or unauthorized. Auto logout triggered.");
 
-      // Clear auth data
       localStorage.removeItem("JWT_TOKEN");
       localStorage.removeItem("USER");
       localStorage.removeItem("IS_ADMIN");
-      localStorage.removeItem("CSRF_TOKEN");
 
-      // Redirect to login
       window.location.href = "/login";
     }
 
